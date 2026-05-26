@@ -6,31 +6,59 @@ const app = express();
 
 app.use(express.json());
 
+/*
+========================================
+ROOT ROUTE
+========================================
+*/
+
 app.get("/", (req, res) => {
   res.send("Sarvam TTS Server Running");
 });
 
+/*
+========================================
+TTS ROUTE
+========================================
+*/
+
 app.post("/test-tts", async (req, res) => {
   try {
-    console.log("Incoming Request:");
+
+    console.log("========== INCOMING REQUEST ==========");
+    console.log(req.body);
 
     const text =
       req.body.text ||
       req.body.message ||
       "Namaste from SPIM Realty";
 
+    /*
+    ========================================
+    SARVAM API CALL
+    ========================================
+    */
+
     const response = await axios.post(
       "https://api.sarvam.ai/text-to-speech",
       {
         inputs: [text],
+
         target_language_code: "te-IN",
+
         speaker: "anushka",
+
         pitch: 0,
-        pace: 1,
+
+        pace: 1.0,
+
         loudness: 1.5,
+
         speech_sample_rate: 22050,
+
         enable_preprocessing: true,
-        model: "bulbul:v1"
+
+        model: "bulbul:v1",
       },
       {
         headers: {
@@ -40,32 +68,46 @@ app.post("/test-tts", async (req, res) => {
       }
     );
 
-    console.log("SUCCESS");
+    console.log("========== SARVAM SUCCESS ==========");
+    console.log(response.data);
 
-    res.json(response.data);
+    return res.status(200).json(response.data);
 
   } catch (error) {
 
-    console.log("FULL ERROR:");
+    console.log("========== FULL ERROR ==========");
 
     if (error.response) {
+
+      console.log("SARVAM API ERROR:");
       console.log(error.response.data);
 
-      return res.status(500).json({
+      return res.status(error.response.status || 500).json({
+        success: false,
+        source: "sarvam-api",
         error: error.response.data,
       });
     }
 
+    console.log("SERVER ERROR:");
     console.log(error.message);
 
-    res.status(500).json({
+    return res.status(500).json({
+      success: false,
+      source: "server",
       error: error.message,
     });
   }
 });
 
+/*
+========================================
+SERVER START
+========================================
+*/
+
 const PORT = process.env.PORT || 3000;
 
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
-});
+}); 
