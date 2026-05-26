@@ -6,20 +6,26 @@ const app = express();
 
 app.use(express.json());
 
+app.get("/", (req, res) => {
+  res.send("Sarvam TTS Server Running");
+});
+
 app.post("/test-tts", async (req, res) => {
   try {
-    console.log("Incoming Request Body:");
-    console.log(req.body);
+
+    console.log("REQUEST RECEIVED");
 
     const text =
       req.body.text ||
       req.body.message ||
       "Namaste from SPIM Realty";
 
+    console.log("TEXT:", text);
+
     const response = await axios.post(
-      "https://api.sarvam.ai/text-to-speech",
+      "https://api.sarvam.ai/text-to-speech/convert",
       {
-        text: text,
+        inputs: [text],
         target_language_code: "te-IN",
         speaker: "male",
         pitch: 0,
@@ -27,7 +33,7 @@ app.post("/test-tts", async (req, res) => {
         loudness: 1.0,
         speech_sample_rate: 22050,
         enable_preprocessing: true,
-        model: "bulbul:v1",
+        model: "bulbul:v1"
       },
       {
         headers: {
@@ -37,20 +43,23 @@ app.post("/test-tts", async (req, res) => {
       }
     );
 
-    console.log("SARVAM RESPONSE SUCCESS");
+    console.log("SARVAM SUCCESS");
 
     res.json(response.data);
+
   } catch (error) {
-    console.log("FULL ERROR:");
+
+    console.log("FULL ERROR BELOW");
 
     if (error.response) {
       console.log(error.response.data);
+      console.log(error.response.status);
     } else {
       console.log(error.message);
     }
 
     res.status(500).json({
-      error: "TTS generation failed",
+      error: "TTS generation failed"
     });
   }
 });
