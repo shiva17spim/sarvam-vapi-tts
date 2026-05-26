@@ -47,7 +47,7 @@ app.post("/test-tts", async (req, res) => {
         speaker: "manisha",
         speech_sample_rate: 22050,
         enable_preprocessing: true,
-        model: "bulbul:v3"
+        model: "bulbul:v2"
         },
       {
         headers: {
