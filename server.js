@@ -1,47 +1,62 @@
-require("dotenv").config();
-
 const express = require("express");
 const axios = require("axios");
+require("dotenv").config();
 
 const app = express();
 
 app.use(express.json());
 
-app.get("/", (req, res) => {
-  res.send("Sarvam Vapi TTS Server Running");
-});
-
-app.get("/test-tts", async (req, res) => {
+app.post("/test-tts", async (req, res) => {
   try {
 
-    const response = await axios({
-      method: "post",
-      url: "https://api.sarvam.ai/text-to-speech",
-      headers: {
-        "api-subscription-key": process.env.SARVAM_API_KEY,
-        "Content-Type": "application/json"
-      },
-      data: {
-        inputs: ["Namaste! Welcome to SPIM Realty."],
+    console.log("Incoming Request Body:");
+    console.log(req.body);
+
+    // Text coming from Vapi
+    const text =
+      req.body.text ||
+      req.body.message ||
+      "Namaste from SPIM Realty";
+
+    console.log("TEXT RECEIVED:");
+    console.log(text);
+
+    // Request to Sarvam TTS
+    const response = await axios.post(
+      "https://api.sarvam.ai/text-to-speech",
+      {
+        text: text,
         target_language_code: "en-IN",
-        speaker: "anushka"
+        speaker: "meera",
+        pitch: 0,
+        pace: 1,
+        loudness: 1,
+        speech_sample_rate: 22050,
+        enable_preprocessing: true,
+        model: "bulbul:v2"
       },
-      responseType: "arraybuffer"
-    });
+      {
+        headers: {
+          "api-subscription-key": process.env.SARVAM_API_KEY,
+          "Content-Type": "application/json"
+        }
+      }
+    );
 
-    res.set({
-      "Content-Type": "audio/wav"
-    });
+    console.log("SARVAM RESPONSE SUCCESS");
 
-    res.send(response.data);
+    // Return Sarvam response to Vapi
+    res.json(response.data);
 
   } catch (error) {
 
     console.log("FULL ERROR:");
 
-    console.log(
-      error.response?.data?.toString() || error.message
-    );
+    if (error.response) {
+      console.log(error.response.data);
+    } else {
+      console.log(error.message);
+    }
 
     res.status(500).json({
       error: "TTS generation failed"
