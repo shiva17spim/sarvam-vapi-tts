@@ -24,10 +24,6 @@ app.post("/test-tts", async (req, res) => {
     console.log(JSON.stringify(req.body, null, 2));
     console.log("=================================");
 
-    // =====================================
-    // SAFE TEXT EXTRACTION
-    // =====================================
-
     let text = "Namaste from SPIM Realty";
 
     if (typeof req.body.text === "string") {
@@ -52,33 +48,22 @@ app.post("/test-tts", async (req, res) => {
     const teluguRegex = /[\u0C00-\u0C7F]/;
 
     let languageCode = "en-IN";
-    let speaker = "vidya";
 
-    // Telugu
     if (teluguRegex.test(text)) {
       languageCode = "te-IN";
-      speaker = "vidya";
     }
-
-    // Hindi
     else if (
-      String(text).toLowerCase().includes("namaste") ||
-      String(text).toLowerCase().includes("aap") ||
-      String(text).toLowerCase().includes("hai") ||
-      String(text).toLowerCase().includes("kya")
+      text.toLowerCase().includes("namaste") ||
+      text.toLowerCase().includes("aap") ||
+      text.toLowerCase().includes("hai")
     ) {
       languageCode = "hi-IN";
-      speaker = "vidya";
     }
-
-    // English
     else {
       languageCode = "en-IN";
-      speaker = "vidya";
     }
 
     console.log("LANGUAGE:", languageCode);
-    console.log("SPEAKER:", speaker);
 
     // =====================================
     // SARVAM API CALL
@@ -91,7 +76,7 @@ app.post("/test-tts", async (req, res) => {
 
         target_language_code: languageCode,
 
-        speaker: speaker,
+        speaker: "vidya",
 
         speech_sample_rate: 22050,
 
@@ -109,35 +94,18 @@ app.post("/test-tts", async (req, res) => {
 
     console.log("SARVAM SUCCESS");
 
-    // =====================================
-    // GET BASE64 AUDIO
-    // =====================================
-
     const base64Audio = sarvamResponse.data.audios[0];
 
     if (!base64Audio) {
-      throw new Error("No audio returned from Sarvam");
+      throw new Error("No audio returned");
     }
 
-    // =====================================
-    // CONVERT TO AUDIO BUFFER
-    // =====================================
+    // IMPORTANT
+    // SEND JSON INSTEAD OF RAW BUFFER
 
-    const audioBuffer = Buffer.from(base64Audio, "base64");
-
-    console.log("AUDIO BUFFER SIZE:", audioBuffer.length);
-
-    // =====================================
-    // SEND AUDIO TO VAPI
-    // =====================================
-
-    res.set({
-      "Content-Type": "audio/mpeg",
-      "Content-Length": audioBuffer.length,
-      "Cache-Control": "no-cache",
+    return res.json({
+      audio: base64Audio
     });
-
-    return res.send(audioBuffer);
 
   } catch (error) {
 
@@ -146,11 +114,9 @@ app.post("/test-tts", async (req, res) => {
     console.log("=================================");
 
     if (error.response) {
-
       console.log(error.response.data);
 
       return res.status(500).json({
-        success: false,
         error: error.response.data,
       });
     }
@@ -158,12 +124,10 @@ app.post("/test-tts", async (req, res) => {
     console.log(error.message);
 
     return res.status(500).json({
-      success: false,
       error: error.message,
     });
   }
 });
-
 // =====================================
 // PORT
 // =====================================
