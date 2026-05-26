@@ -6,49 +6,77 @@ const app = express();
 
 app.use(express.json());
 
-/*
-========================================
-ROOT ROUTE
-========================================
-*/
-
 app.get("/", (req, res) => {
   res.send("Sarvam TTS Server Running");
 });
 
-/*
-========================================
-TTS ROUTE
-========================================
-*/
-
 app.post("/test-tts", async (req, res) => {
   try {
+    console.log("Incoming Request");
 
-    console.log("========== INCOMING REQUEST ==========");
-    console.log(req.body);
-
+    // =========================
+    // GET TEXT FROM VAPI
+    // =========================
     const text =
       req.body.text ||
       req.body.message ||
+      req.body.transcript ||
       "Namaste from SPIM Realty";
 
-    /*
-    ========================================
-    SARVAM API CALL
-    ========================================
-    */
+    console.log("TEXT:", text);
 
+    // =========================
+    // SIMPLE LANGUAGE DETECTION
+    // =========================
+    const teluguRegex = /[\u0C00-\u0C7F]/;
+
+    let languageCode = "en-IN";
+    let speaker = "vidya";
+
+    // Telugu detection
+    if (teluguRegex.test(text)) {
+      languageCode = "te-IN";
+      speaker = "vidya";
+    }
+
+    // Hindi detection
+    else if (
+      text.includes("namaste") ||
+      text.includes("aap") ||
+      text.includes("hai") ||
+      text.includes("kya")
+    ) {
+      languageCode = "hi-IN";
+      speaker = "vidya";
+    }
+
+    // English default
+    else {
+      languageCode = "en-IN";
+      speaker = "vidya";
+    }
+
+    console.log("LANGUAGE:", languageCode);
+    console.log("SPEAKER:", speaker);
+
+    // =========================
+    // SARVAM API CALL
+    // =========================
     const response = await axios.post(
       "https://api.sarvam.ai/text-to-speech",
-        {
+      {
         inputs: [text],
-        target_language_code: "te-IN",
-        speaker: "manisha",
+
+        target_language_code: languageCode,
+
+        speaker: speaker,
+
         speech_sample_rate: 22050,
+
         enable_preprocessing: true,
-        model: "bulbul:v2"
-        },
+
+        model: "bulbul:v3"
+      },
       {
         headers: {
           "api-subscription-key": process.env.SARVAM_API_KEY,
@@ -57,46 +85,50 @@ app.post("/test-tts", async (req, res) => {
       }
     );
 
-    console.log("========== SARVAM SUCCESS ==========");
-    console.log(response.data);
+    console.log("SARVAM SUCCESS");
 
-    return res.status(200).json(response.data);
+    // =========================
+    // CONVERT BASE64 TO AUDIO
+    // =========================
+    const base64Audio = response.data.audios[0];
+
+    const audioBuffer = Buffer.from(base64Audio, "base64");
+
+    // =========================
+    // SEND AUDIO TO VAPI
+    // =========================
+    res.set({
+      "Content-Type": "audio/wav",
+      "Content-Length": audioBuffer.length,
+    });
+
+    res.send(audioBuffer);
 
   } catch (error) {
 
-    console.log("========== FULL ERROR ==========");
+    console.log("FULL ERROR");
 
     if (error.response) {
-
-      console.log("SARVAM API ERROR:");
       console.log(error.response.data);
 
-      return res.status(error.response.status || 500).json({
-        success: false,
-        source: "sarvam-api",
+      return res.status(500).json({
         error: error.response.data,
       });
     }
 
-    console.log("SERVER ERROR:");
     console.log(error.message);
 
-    return res.status(500).json({
-      success: false,
-      source: "server",
+    res.status(500).json({
       error: error.message,
     });
   }
 });
 
-/*
-========================================
-SERVER START
-========================================
-*/
-
+// =========================
+// PORT
+// =========================
 const PORT = process.env.PORT || 3000;
 
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
-}); 
+});
