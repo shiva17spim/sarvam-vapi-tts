@@ -4,53 +4,64 @@ require("dotenv").config();
 
 const app = express();
 
-app.use(express.json());
+app.use(express.json({ limit: "10mb" }));
 
+// =====================================
+// HEALTH CHECK
+// =====================================
 app.get("/", (req, res) => {
   res.send("Sarvam TTS Server Running");
 });
 
+// =====================================
+// TTS ENDPOINT
+// =====================================
 app.post("/test-tts", async (req, res) => {
   try {
-    console.log("Incoming Request");
 
-    // =========================
+    console.log("=================================");
+    console.log("INCOMING REQUEST");
+    console.log(JSON.stringify(req.body, null, 2));
+    console.log("=================================");
+
+    // =====================================
     // GET TEXT FROM VAPI
-    // =========================
+    // =====================================
     const text =
       req.body.text ||
       req.body.message ||
       req.body.transcript ||
+      req.body.response ||
       "Namaste from SPIM Realty";
 
     console.log("TEXT:", text);
 
-    // =========================
-    // SIMPLE LANGUAGE DETECTION
-    // =========================
+    // =====================================
+    // LANGUAGE DETECTION
+    // =====================================
     const teluguRegex = /[\u0C00-\u0C7F]/;
 
     let languageCode = "en-IN";
     let speaker = "vidya";
 
-    // Telugu detection
+    // Telugu
     if (teluguRegex.test(text)) {
       languageCode = "te-IN";
       speaker = "vidya";
     }
 
-    // Hindi detection
+    // Hindi
     else if (
-      text.includes("namaste") ||
-      text.includes("aap") ||
-      text.includes("hai") ||
-      text.includes("kya")
+      text.toLowerCase().includes("namaste") ||
+      text.toLowerCase().includes("aap") ||
+      text.toLowerCase().includes("hai") ||
+      text.toLowerCase().includes("kya")
     ) {
       languageCode = "hi-IN";
       speaker = "vidya";
     }
 
-    // English default
+    // English
     else {
       languageCode = "en-IN";
       speaker = "vidya";
@@ -59,10 +70,10 @@ app.post("/test-tts", async (req, res) => {
     console.log("LANGUAGE:", languageCode);
     console.log("SPEAKER:", speaker);
 
-    // =========================
+    // =====================================
     // SARVAM API CALL
-    // =========================
-    const response = await axios.post(
+    // =====================================
+    const sarvamResponse = await axios.post(
       "https://api.sarvam.ai/text-to-speech",
       {
         inputs: [text],
@@ -75,7 +86,9 @@ app.post("/test-tts", async (req, res) => {
 
         enable_preprocessing: true,
 
-        model: "bulbul:v3"
+        model: "bulbul:v3",
+
+        response_format: "mp3"
       },
       {
         headers: {
@@ -87,46 +100,60 @@ app.post("/test-tts", async (req, res) => {
 
     console.log("SARVAM SUCCESS");
 
-    // =========================
-    // CONVERT BASE64 TO AUDIO
-    // =========================
-    const base64Audio = response.data.audios[0];
+    // =====================================
+    // BASE64 AUDIO
+    // =====================================
+    const base64Audio = sarvamResponse.data.audios[0];
 
+    if (!base64Audio) {
+      throw new Error("No audio returned from Sarvam");
+    }
+
+    // =====================================
+    // CONVERT TO BUFFER
+    // =====================================
     const audioBuffer = Buffer.from(base64Audio, "base64");
 
-    // =========================
+    console.log("AUDIO BUFFER SIZE:", audioBuffer.length);
+
+    // =====================================
     // SEND AUDIO TO VAPI
-    // =========================
+    // =====================================
     res.set({
-      "Content-Type": "audio/wav",
+      "Content-Type": "audio/mpeg",
       "Content-Length": audioBuffer.length,
+      "Cache-Control": "no-cache",
     });
 
-    res.send(audioBuffer);
+    return res.send(audioBuffer);
 
   } catch (error) {
 
+    console.log("=================================");
     console.log("FULL ERROR");
+    console.log("=================================");
 
     if (error.response) {
       console.log(error.response.data);
 
       return res.status(500).json({
+        success: false,
         error: error.response.data,
       });
     }
 
     console.log(error.message);
 
-    res.status(500).json({
+    return res.status(500).json({
+      success: false,
       error: error.message,
     });
   }
 });
 
-// =========================
+// =====================================
 // PORT
-// =========================
+// =====================================
 const PORT = process.env.PORT || 3000;
 
 app.listen(PORT, () => {
