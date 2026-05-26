@@ -25,20 +25,30 @@ app.post("/test-tts", async (req, res) => {
     console.log("=================================");
 
     // =====================================
-    // GET TEXT FROM VAPI
+    // SAFE TEXT EXTRACTION
     // =====================================
-    const text =
-      req.body.text ||
-      req.body.message ||
-      req.body.transcript ||
-      req.body.response ||
-      "Namaste from SPIM Realty";
 
-    console.log("TEXT:", text);
+    let text = "Namaste from SPIM Realty";
+
+    if (typeof req.body.text === "string") {
+      text = req.body.text;
+    }
+    else if (typeof req.body.message === "string") {
+      text = req.body.message;
+    }
+    else if (typeof req.body.transcript === "string") {
+      text = req.body.transcript;
+    }
+    else if (typeof req.body.response === "string") {
+      text = req.body.response;
+    }
+
+    console.log("FINAL TEXT:", text);
 
     // =====================================
     // LANGUAGE DETECTION
     // =====================================
+
     const teluguRegex = /[\u0C00-\u0C7F]/;
 
     let languageCode = "en-IN";
@@ -52,10 +62,10 @@ app.post("/test-tts", async (req, res) => {
 
     // Hindi
     else if (
-      text.toLowerCase().includes("namaste") ||
-      text.toLowerCase().includes("aap") ||
-      text.toLowerCase().includes("hai") ||
-      text.toLowerCase().includes("kya")
+      String(text).toLowerCase().includes("namaste") ||
+      String(text).toLowerCase().includes("aap") ||
+      String(text).toLowerCase().includes("hai") ||
+      String(text).toLowerCase().includes("kya")
     ) {
       languageCode = "hi-IN";
       speaker = "vidya";
@@ -73,6 +83,7 @@ app.post("/test-tts", async (req, res) => {
     // =====================================
     // SARVAM API CALL
     // =====================================
+
     const sarvamResponse = await axios.post(
       "https://api.sarvam.ai/text-to-speech",
       {
@@ -86,9 +97,7 @@ app.post("/test-tts", async (req, res) => {
 
         enable_preprocessing: true,
 
-        model: "bulbul:v3",
-
-        response_format: "mp3"
+        model: "bulbul:v3"
       },
       {
         headers: {
@@ -101,8 +110,9 @@ app.post("/test-tts", async (req, res) => {
     console.log("SARVAM SUCCESS");
 
     // =====================================
-    // BASE64 AUDIO
+    // GET BASE64 AUDIO
     // =====================================
+
     const base64Audio = sarvamResponse.data.audios[0];
 
     if (!base64Audio) {
@@ -110,8 +120,9 @@ app.post("/test-tts", async (req, res) => {
     }
 
     // =====================================
-    // CONVERT TO BUFFER
+    // CONVERT TO AUDIO BUFFER
     // =====================================
+
     const audioBuffer = Buffer.from(base64Audio, "base64");
 
     console.log("AUDIO BUFFER SIZE:", audioBuffer.length);
@@ -119,6 +130,7 @@ app.post("/test-tts", async (req, res) => {
     // =====================================
     // SEND AUDIO TO VAPI
     // =====================================
+
     res.set({
       "Content-Type": "audio/mpeg",
       "Content-Length": audioBuffer.length,
@@ -134,6 +146,7 @@ app.post("/test-tts", async (req, res) => {
     console.log("=================================");
 
     if (error.response) {
+
       console.log(error.response.data);
 
       return res.status(500).json({
@@ -154,6 +167,7 @@ app.post("/test-tts", async (req, res) => {
 // =====================================
 // PORT
 // =====================================
+
 const PORT = process.env.PORT || 3000;
 
 app.listen(PORT, () => {
