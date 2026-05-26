@@ -41,19 +41,14 @@ app.post("/test-tts", async (req, res) => {
 
     const response = await axios.post(
       "https://api.sarvam.ai/text-to-speech",
-      {
+        {
         inputs: [text],
-
         target_language_code: "te-IN",
-
-        speaker: "meera",
-
+        speaker: "manisha",
         speech_sample_rate: 22050,
-
         enable_preprocessing: true,
-
-        model: "bulbul:v3",
-      },
+        model: "bulbul:v3"
+        },
       {
         headers: {
           "api-subscription-key": process.env.SARVAM_API_KEY,
