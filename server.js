@@ -58,7 +58,7 @@ app.post("/test-tts", async (req, res) => {
 
         enable_preprocessing: true,
 
-        model: "bulbul:v1",
+        model: "bulbul:v3",
       },
       {
         headers: {
