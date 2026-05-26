@@ -48,12 +48,6 @@ app.post("/test-tts", async (req, res) => {
 
         speaker: "anushka",
 
-        pitch: 0,
-
-        pace: 1.0,
-
-        loudness: 1.5,
-
         speech_sample_rate: 22050,
 
         enable_preprocessing: true,
