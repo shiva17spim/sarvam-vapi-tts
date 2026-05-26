@@ -46,7 +46,7 @@ app.post("/test-tts", async (req, res) => {
 
         target_language_code: "te-IN",
 
-        speaker: "anushka",
+        speaker: "meera",
 
         speech_sample_rate: 22050,
 
