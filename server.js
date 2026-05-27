@@ -56,14 +56,16 @@ app.post("/test-tts", async (req, res) => {
 
     let languageCode = "en-IN";
 
+    const lowerText = String(text).toLowerCase();
+
     if (teluguRegex.test(text)) {
 
       languageCode = "te-IN";
 
     } else if (
-      text.toLowerCase().includes("namaste") ||
-      text.toLowerCase().includes("aap") ||
-      text.toLowerCase().includes("hai")
+      lowerText.includes("namaste") ||
+      lowerText.includes("aap") ||
+      lowerText.includes("hai")
     ) {
 
       languageCode = "hi-IN";
@@ -92,9 +94,7 @@ app.post("/test-tts", async (req, res) => {
 
         enable_preprocessing: true,
 
-        model: "bulbul:v3",
-
-        response_format: "mp3"
+        model: "bulbul:v2"
       },
       {
         headers: {
@@ -122,11 +122,11 @@ app.post("/test-tts", async (req, res) => {
     console.log("BUFFER SIZE:", audioBuffer.length);
 
     // =====================================
-    // SEND MP3
+    // SEND AUDIO
     // =====================================
 
     res.writeHead(200, {
-      "Content-Type": "audio/mpeg",
+      "Content-Type": "audio/wav",
       "Content-Length": audioBuffer.length,
       "Cache-Control": "no-cache"
     });
@@ -140,6 +140,7 @@ app.post("/test-tts", async (req, res) => {
     console.log("=================================");
 
     if (error.response) {
+
       console.log(JSON.stringify(error.response.data, null, 2));
 
       return res.status(500).json({
