@@ -9,6 +9,7 @@ app.use(express.json({ limit: "10mb" }));
 // =====================================
 // HEALTH CHECK
 // =====================================
+
 app.get("/", (req, res) => {
   res.send("Sarvam TTS Server Running");
 });
@@ -16,13 +17,19 @@ app.get("/", (req, res) => {
 // =====================================
 // TTS ENDPOINT
 // =====================================
+
 app.post("/test-tts", async (req, res) => {
+
   try {
 
     console.log("=================================");
     console.log("INCOMING REQUEST");
     console.log(JSON.stringify(req.body, null, 2));
     console.log("=================================");
+
+    // =====================================
+    // GET TEXT
+    // =====================================
 
     let text = "Namaste from SPIM Realty";
 
@@ -50,23 +57,29 @@ app.post("/test-tts", async (req, res) => {
     let languageCode = "en-IN";
 
     if (teluguRegex.test(text)) {
+
       languageCode = "te-IN";
-    }
-    else if (
+
+    } else if (
+
       text.toLowerCase().includes("namaste") ||
       text.toLowerCase().includes("aap") ||
-      text.toLowerCase().includes("hai")
+      text.toLowerCase().includes("hai") ||
+      text.toLowerCase().includes("kya")
+
     ) {
+
       languageCode = "hi-IN";
-    }
-    else {
+
+    } else {
+
       languageCode = "en-IN";
     }
 
     console.log("LANGUAGE:", languageCode);
 
     // =====================================
-    // SARVAM API CALL
+    // SARVAM API
     // =====================================
 
     const sarvamResponse = await axios.post(
@@ -89,23 +102,45 @@ app.post("/test-tts", async (req, res) => {
           "api-subscription-key": process.env.SARVAM_API_KEY,
           "Content-Type": "application/json",
         },
+        timeout: 30000
       }
     );
 
     console.log("SARVAM SUCCESS");
 
-    const base64Audio = sarvamResponse.data.audios[0];
+    // =====================================
+    // GET AUDIO
+    // =====================================
+
+    const base64Audio = sarvamResponse?.data?.audios?.[0];
 
     if (!base64Audio) {
-      throw new Error("No audio returned");
+      throw new Error("No audio returned from Sarvam");
     }
 
-    // IMPORTANT
-    // SEND JSON INSTEAD OF RAW BUFFER
+    // =====================================
+    // BASE64 → BUFFER
+    // =====================================
 
-    return res.json({
-      audio: base64Audio
+    const audioBuffer = Buffer.from(base64Audio, "base64");
+
+    console.log("BUFFER SIZE:", audioBuffer.length);
+
+    // =====================================
+    // SEND AUDIO TO VAPI
+    // =====================================
+
+    res.status(200);
+
+    res.set({
+      "Content-Type": "audio/wav",
+      "Content-Length": audioBuffer.length,
+      "Cache-Control": "no-cache",
+      "Connection": "keep-alive",
+      "Accept-Ranges": "bytes"
     });
+
+    return res.end(audioBuffer);
 
   } catch (error) {
 
@@ -114,20 +149,24 @@ app.post("/test-tts", async (req, res) => {
     console.log("=================================");
 
     if (error.response) {
-      console.log(error.response.data);
+
+      console.log(JSON.stringify(error.response.data, null, 2));
 
       return res.status(500).json({
-        error: error.response.data,
+        success: false,
+        error: error.response.data
       });
     }
 
     console.log(error.message);
 
     return res.status(500).json({
-      error: error.message,
+      success: false,
+      error: error.message
     });
   }
 });
+
 // =====================================
 // PORT
 // =====================================
